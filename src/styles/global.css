@@ -1,0 +1,22 @@
+body {
+  font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+.MuiTypography-root,
+.MuiButton-root,
+.MuiInputBase-root {
+  font-family: -apple-system, system-ui, BlinkMacSystemFont, 'Segoe UI', Roboto, Arial, sans-serif !important;
+}
+
+.MuiCardHeader-title {
+  font-size: 1.1rem !important;
+  font-weight: 500 !important;
+}
+
+.MuiButton-root {
+  font-size: 0.9rem !important;
+  font-weight: 400 !important;
+  text-transform: none !important;
+}

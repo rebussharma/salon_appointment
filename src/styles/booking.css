@@ -1,0 +1,295 @@
+/* Base Layout */
+.booking-container {
+    max-width: 768px;
+    margin: 0 auto;
+    padding: 16px;
+    font-family: system-ui, -apple-system, sans-serif;
+  }
+  
+  /* Card Styles */
+  .card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+    margin-bottom: 16px;
+  }
+  
+  .card-header {
+    padding: 16px;
+    border-bottom: 1px solid #eee;
+  }
+  
+  .card-title {
+    font-size: 20px;
+    font-weight: 600;
+    margin: 0;
+    color: #111827;
+  }
+  
+  .card-content {
+    padding: 16px;
+  }
+  
+  /* Service Selection */
+  .service-buttons {
+    display: flex;
+    gap: 8px;
+    overflow-x: auto;
+    padding-bottom: 16px;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+  
+  .service-buttons::-webkit-scrollbar {
+    display: none;
+  }
+  
+  .service-button {
+    padding: 8px 16px;
+    white-space: nowrap;
+    border-radius: 6px;
+  }
+  
+  .service-list {
+    margin-top: 16px;
+  }
+  
+  .service-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px;
+    margin: 8px 0;
+  }
+  
+  .service-item-left {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .service-item-right {
+    display: flex;
+    align-items: center;
+    gap: 16px;
+  }
+  
+  .service-time {
+    color: #6b7280;
+    font-size: 14px;
+  }
+  
+  .service-price {
+    font-weight: 600;
+    color: #111827;
+  }
+  
+  /* Artist Selection */
+  .artist-grid {
+    display: flex;
+    justify-content: center;
+    gap: 24px;
+    padding: 16px 0;
+  }
+  
+  .artist-item {
+    text-align: center;
+  }
+  
+  .artist-button {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: 2px solid transparent;
+    transition: all 0.2s;
+  }
+  
+  .artist-button.selected {
+    border-color: #2563eb;
+    box-shadow: 0 0 0 2px rgba(37, 99, 235, 0.2);
+  }
+  
+  .artist-name {
+    margin-top: 8px;
+    font-size: 14px;
+    color: #374151;
+  }
+  
+  /* Calendar */
+  .calendar-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 16px;
+  }
+  
+  .calendar-month {
+    font-size: 18px;
+    font-weight: 500;
+    color: #111827;
+  }
+  
+  .calendar-nav-button {
+    padding: 8px;
+    border-radius: 6px;
+  }
+  
+  .calendar-grid {
+    display: grid;
+    grid-template-columns: repeat(7, 1fr);
+    gap: 4px;
+  }
+  
+  .calendar-weekday {
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 500;
+    color: #6b7280;
+  }
+  
+  .calendar-day {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  
+  .calendar-day-button {
+    width: 40px;
+    height: 40px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: transparent;
+    cursor: pointer;
+  }
+  
+  .calendar-day-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  .calendar-day-button.selected {
+    background-color: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+  
+  /* Time Selection */
+  .time-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-top: 16px;
+  }
+  
+  .time-button {
+    padding: 8px;
+    font-size: 14px;
+    border-radius: 6px;
+    border: 1px solid #e5e7eb;
+    background: transparent;
+    cursor: pointer;
+  }
+  
+  .time-button.selected {
+    background-color: #2563eb;
+    color: white;
+    border-color: #2563eb;
+  }
+  
+  .time-button:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+  
+  /* Form Inputs */
+  .user-info {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+  }
+  
+  .form-input {
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+  }
+  
+  .form-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: 8px 12px;
+    border: 1px solid #e5e7eb;
+    border-radius: 6px;
+    font-size: 14px;
+    resize: vertical;
+  }
+  
+  /* Summary Section */
+  .summary-container {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .summary-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    color: #374151;
+  }
+  
+  .summary-divider {
+    height: 1px;
+    background-color: #e5e7eb;
+    margin: 12px 0;
+  }
+  
+  .summary-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+  }
+  
+  .icon {
+    width: 16px;
+    height: 16px;
+    color: #6b7280;
+  }
+  
+  /* Complete Booking Button */
+  .complete-booking-button {
+    width: 100%;
+    padding: 12px;
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    border-radius: 6px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background-color 0.2s;
+  }
+  
+  .complete-booking-button:disabled {
+    background-color: #93c5fd;
+    cursor: not-allowed;
+  }
+  
+  .complete-booking-button:hover:not(:disabled) {
+    background-color: #1d4ed8;
+  }
+  
+  /* Utility Classes */
+  .hidden {
+    display: none;
+  }
