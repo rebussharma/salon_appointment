@@ -1,94 +1,110 @@
+// src/components/booking/ClientInfoForm/ClientInfoForm.tsx
 import {
+  Clear as ClearIcon,
+  Comment as CommentIcon,
+  Email as EmailIcon,
+  Help as HelpIcon,
+  Person as PersonIcon,
+  Phone as PhoneIcon
+} from '@mui/icons-material';
+import {
+  Box,
   Card,
   CardContent,
   CardHeader,
   Grid,
+  IconButton,
+  InputAdornment,
   TextField,
-  styled
+  Tooltip,
+  Typography
 } from '@mui/material';
-import { useEffect, useState } from 'react';
+import React, { useState } from 'react';
+
 import { ClientInfo } from '../../utils/types';
-import { ValidationError } from './BookingSystem';
-
-const EMAIL_REGEX = /^[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}$/i;
-const PHONE_REGEX = /^(\+\d{1,3}[- ]?)?\d{10}$|^\d{3}[-.]?\d{3}[-.]?\d{4}$|^\(\d{3}\)\s?\d{3}[-.]?\d{4}$/;
-
-const StyledTextField = styled(TextField)(({ theme }) => ({
-  '& .MuiInputBase-input': {
-    fontSize: '0.9rem',
-  },
-  '& .MuiInputLabel-root': {
-    fontSize: '0.9rem',
-  },
-  '& .MuiFormHelperText-root': {
-    display: 'flex',
-    justifyContent: 'space-between',
-    marginLeft: 0,
-    marginRight: 0
-  }
-}));
+import { ValidationError } from '../common/ValidationError';
 
 interface ClientInfoFormProps {
   clientInfo: ClientInfo;
-  onClientInfoChange: (info: ClientInfo) => void;
-  isExpanded: boolean;
+  onClientInfoChange: (info: Partial<ClientInfo>) => void;
+  validationErrors?: {
+    name?: string;
+    emailId?: string;
+    phone?: string;
+    message?: string;
+  };
+  // Add these for backward compatibility
+  isExpanded?: boolean;
   hasError?: boolean;
   errorStyle?: React.CSSProperties;
-  submissionAttempted?: boolean;
 }
 
-export default function ClientInfoForm({ 
-  clientInfo, 
+const ClientInfoForm: React.FC<ClientInfoFormProps> = ({
+  clientInfo,
   onClientInfoChange,
-  isExpanded,
-  hasError,
-  errorStyle
-}: ClientInfoFormProps) {
-  const [touched, setTouched] = useState({
+  validationErrors = {}
+}) => {
+  // Track field focus state for better UX
+  const [focused, setFocused] = useState<Record<string, boolean>>({
     name: false,
     emailId: false,
-    phone: false
+    phone: false,
+    message: false
   });
 
-  const getNameError = () => {
-    if (!touched.name && !hasError) return '';
-    if (!clientInfo.name.trim()) return 'Name is required';
-    if (clientInfo.name.length < 2) return 'Name must be at least 2 characters';
-    return '';
+  // Track character counts
+  const maxLengths = {
+    name: 50,
+    emailId: 60,
+    phone: 15,
+    message: 250
   };
 
-  const getEmailError = () => {
-    if (!touched.emailId && !hasError) return '';
-    if (!clientInfo.emailId && !clientInfo.phone) return 'Either email or phone is required';
-    if (clientInfo.emailId && !EMAIL_REGEX.test(clientInfo.emailId)) return 'Invalid email format';
-    return '';
+  // Handle focus state
+  const handleFocus = (field: string) => {
+    setFocused(prev => ({ ...prev, [field]: true }));
   };
 
-  const getPhoneError = () => {
-    if (!touched.phone && !hasError) return '';
-    if (!clientInfo.phone && !clientInfo.emailId) return 'Either phone or email is required';
-    if (clientInfo.phone && !PHONE_REGEX.test(clientInfo.phone)) return 'Invalid phone format';
-    return '';
+  const handleBlur = (field: string) => {
+    setFocused(prev => ({ ...prev, [field]: false }));
   };
 
-  useEffect(() => {
-    if (isExpanded || hasError) {
-      setTouched({
-        name: true,
-        emailId: true,
-        phone: true
-      });
+  // Handle input changes
+  const handleChange = (field: keyof ClientInfo, value: string) => {
+    onClientInfoChange({ [field]: value });
+  };
+
+  // Handle clearing a field
+  const handleClear = (field: keyof ClientInfo) => {
+    onClientInfoChange({ [field]: '' });
+    
+    // Refocus the field after clearing
+    const input = document.getElementById(`client-${field}`);
+    if (input) {
+      input.focus();
     }
-  }, [isExpanded, hasError]);
+  };
 
+  // Check if a field has validation errors
+  const hasError = (field: keyof typeof validationErrors): boolean => {
+    return Boolean(validationErrors[field]);
+  };
 
-  const handleBlur = (field: keyof typeof touched) => {
-    setTouched(prev => ({ ...prev, [field]: true }));
+  // Get helper text for a field
+  const getHelperText = (field: keyof typeof validationErrors, value: string, maxLength: number) => {
+    if (validationErrors[field]) {
+      return validationErrors[field];
+    }
+    
+    if (focused[field]) {
+      return `${value.length}/${maxLength}`;
+    }
+    
+    return '';
   };
 
   return (
-    <Card id="user-info" sx={errorStyle}>
-      {hasError && <ValidationError />}      
+    <Card id="client-info">
       <CardHeader 
         title="Your Information" 
         subheader="Please provide your contact details"
@@ -96,104 +112,182 @@ export default function ClientInfoForm({
       <CardContent>
         <Grid container spacing={2}>
           <Grid item xs={12}>
-            <StyledTextField
+            <TextField
+              id="client-name"
               fullWidth
               required
               label="Name"
               value={clientInfo.name}
-              error={!!getNameError()}
-              helperText={
-                <span>
-                  {getNameError()}
-                  <span>{clientInfo.name.length}/50</span>
-                </span>
-              }
+              error={hasError('name')}
+              helperText={getHelperText('name', clientInfo.name, maxLengths.name)}
               inputProps={{ 
-                htmlInput:{
-                  maxLength: 50,
-                  'aria-label': 'name'
-                }
+                maxLength: maxLengths.name,
+                'aria-label': 'name'
               }}
+              onFocus={() => handleFocus('name')}
               onBlur={() => handleBlur('name')}
-              onChange={(e) => onClientInfoChange({ ...clientInfo, name: e.target.value })}
+              onChange={(e) => handleChange('name', e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <PersonIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: clientInfo.name && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear name"
+                      onClick={() => handleClear('name')}
+                      edge="end"
+                      size="small"
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
+            {hasError('name') && (
+              <ValidationError message={validationErrors.name || "Name is required"} />
+            )}
           </Grid>
 
           <Grid item xs={12}>
-            <StyledTextField
+            <TextField
+              id="client-emailId"
               fullWidth
               label="Email"
               type="email"
               required={!clientInfo.phone}
               value={clientInfo.emailId}
-              error={!!getEmailError()}
-              helperText={
-                <span>
-                  {getEmailError()}
-                  <span>{clientInfo.emailId?.length}/60</span>
-                </span>
-              }
+              error={hasError('emailId')}
+              helperText={getHelperText('emailId', clientInfo.emailId, maxLengths.emailId)}
               inputProps={{ 
-                htmlInput : {
-                  maxLength: 60,
-                  'aria-label': 'email'
-                }
+                maxLength: maxLengths.emailId,
+                'aria-label': 'email'
               }}
+              onFocus={() => handleFocus('emailId')}
               onBlur={() => handleBlur('emailId')}
-              onChange={(e) => onClientInfoChange({ ...clientInfo, emailId: e.target.value })}
+              onChange={(e) => handleChange('emailId', e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <EmailIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: clientInfo.emailId && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear email"
+                      onClick={() => handleClear('emailId')}
+                      edge="end"
+                      size="small"
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
+            {hasError('emailId') && (
+              <ValidationError message={validationErrors.emailId || "Invalid email format"} />
+            )}
           </Grid>
 
           <Grid item xs={12}>
-            <StyledTextField
+            <TextField
+              id="client-phone"
               fullWidth
               label="Phone"
               required={!clientInfo.emailId}
               value={clientInfo.phone}
-              error={!!getPhoneError()}
-              type='number'
-              helperText={
-                <span>
-                  {getPhoneError()}
-                  <span>{clientInfo.phone?.length}/10</span>
-                </span>
-              }
+              error={hasError('phone')}
+              helperText={getHelperText('phone', clientInfo.phone, maxLengths.phone)}
               inputProps={{ 
-                htmlInput : {
-                  minLength: 10,
-                  maxLength: 10,
-                  'aria-label': 'phone'
-                }
+                maxLength: maxLengths.phone,
+                'aria-label': 'phone'
               }}
+              onFocus={() => handleFocus('phone')}
               onBlur={() => handleBlur('phone')}
-              onChange={(e) => onClientInfoChange({ ...clientInfo, phone: e.target.value })}
+              onChange={(e) => handleChange('phone', e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <PhoneIcon color="action" />
+                  </InputAdornment>
+                ),
+                endAdornment: clientInfo.phone && (
+                  <InputAdornment position="end">
+                    <IconButton
+                      aria-label="clear phone"
+                      onClick={() => handleClear('phone')}
+                      edge="end"
+                      size="small"
+                    >
+                      <ClearIcon fontSize="small" />
+                    </IconButton>
+                  </InputAdornment>
+                )
+              }}
             />
+            {hasError('phone') && (
+              <ValidationError message={validationErrors.phone || "Invalid phone format"} />
+            )}
           </Grid>
 
           <Grid item xs={12}>
-            <StyledTextField
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+              <Typography variant="body2" color="text.secondary" sx={{ mr: 1 }}>
+                Message to Artist (Optional)
+              </Typography>
+              <Tooltip title="Include any special requests or information for your artist">
+                <HelpIcon fontSize="small" color="action" />
+              </Tooltip>
+            </Box>
+            <TextField
+              id="client-message"
               fullWidth
               multiline
               rows={4}
-              label="Message to Artist (Optional)"
               value={clientInfo.message}
-              helperText={
-                <span>
-                  <span></span>
-                  <span>{clientInfo.message.length}/250</span>
-                </span>
-              }
+              error={hasError('message')}
+              helperText={getHelperText('message', clientInfo.message, maxLengths.message)}
               inputProps={{ 
-                htmlInput : {
-                  maxLength: 250,
-                  'aria-label': 'message'
+                maxLength: maxLengths.message,
+                'aria-label': 'message'
+              }}
+              onFocus={() => handleFocus('message')}
+              onBlur={() => handleBlur('message')}
+              onChange={(e) => handleChange('message', e.target.value)}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start" sx={{ alignSelf: 'flex-start', mt: 1.5 }}>
+                    <CommentIcon color="action" />
+                  </InputAdornment>
+                )
+              }}
+              placeholder="Any special requests or information for your appointment..."
+              sx={{ 
+                '& .MuiInputBase-root': { 
+                  alignItems: 'flex-start',
+                  paddingLeft: 1 
                 }
               }}
-              onChange={(e) => onClientInfoChange({ ...clientInfo, message: e.target.value })}
             />
+            {hasError('message') && (
+              <ValidationError message={validationErrors.message || "Message is too long"} />
+            )}
           </Grid>
         </Grid>
+
+        <Box sx={{ mt: 3, p: 2, bgcolor: '#f5f5f5', borderRadius: 1 }}>
+          <Typography variant="body2" color="text.secondary">
+            <strong>Privacy Note:</strong> Your contact information will only be used for appointment confirmations and updates.
+          </Typography>
+        </Box>
       </CardContent>
     </Card>
   );
-}
+};
+
+export default ClientInfoForm;

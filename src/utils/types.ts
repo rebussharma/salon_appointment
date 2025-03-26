@@ -40,7 +40,7 @@ export interface ClientInfo {
 }
 
 export interface AppointmetnDetails{
-  appointmentDateTime: string;
+  appointmentDateTime: DateTimeDto;
   serviceType: string;
   artist: string;
   status: string;

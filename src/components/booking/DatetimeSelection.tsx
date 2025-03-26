@@ -1,4 +1,5 @@
 import { ChevronLeft, ChevronRight } from '@mui/icons-material';
+import DoNotDisturbIcon from '@mui/icons-material/DoNotDisturb'; // Import the DoNotDisturbIcon
 import {
   Box,
   Button,
@@ -325,10 +326,22 @@ const DateTimeSelection: FC<DateTimeSelectionProps> = ({
                   p: 0,
                   backgroundColor: isSelected ? '#000000' : 'transparent',
                   color: isSelected ? '#ffffff' : isAvailable ? '#000000' : '#ccc',
-                  borderColor: isSelected ? '#000000' : '#ccc'
+                  borderColor: isSelected ? '#000000' : '#ccc',
                 }}
               >
                 {i + 1}
+                {!isAvailable && (
+                  <DoNotDisturbIcon
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)', // Center the icon in the middle of the button
+                      color: 'rgb(0 0 0 / 15%)', // transparent black overlay
+                      fontSize: '2rem',
+                    }}
+                  />
+                )}
               </Button>
             </Grid>
           );
@@ -409,6 +422,18 @@ const DateTimeSelection: FC<DateTimeSelectionProps> = ({
                 <Typography variant="caption" color="textSecondary">
                   → {endTime}
                 </Typography>
+                {!isAvailable && (
+                  <DoNotDisturbIcon
+                    sx={{
+                      position: 'absolute',
+                      top: '50%',
+                      left: '50%',
+                      transform: 'translate(-50%, -50%)', // Center the icon in the middle of the button
+                      color: 'rgb(0 0 0 / 15%)', // transparent black overlay
+                      fontSize: '2rem',
+                    }}
+                  />
+                )}
               </Button>
             </Grid>
           ))}

@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import BookingSystem from './components/booking/BookingSystem';
-import CancelFail from './components/booking/CancelFail';
-import CancelSuccess from './components/booking/CancelSuccess';
+import CancelFail from './components/dialogs/CancelFail';
+import CancelSuccess from './components/dialogs/CancelSuccess';
 import MainBook from './components/main/MainBook';
 import AppWrapper from './components/wrapper/AppWrapper';
 import { updateBookedTimes } from './utils/utils';

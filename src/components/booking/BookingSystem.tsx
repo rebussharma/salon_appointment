@@ -1,11 +1,17 @@
 import { ArrowBack as ArrowBackIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { Alert, AlertTitle, Box, Button, IconButton } from '@mui/material';
-import { useEffect, useState } from 'react';
-import { postBooking } from '../../utils/axios/bookAppointment';
-import { updateBooking } from '../../utils/axios/updateAppointment';
+import { useEffect, useMemo, useState } from 'react';
+
+// Import new hooks instead of individual API functions
+import { useAPI } from '../../hooks/useApi';
+import { useBookingState } from '../../hooks/useBookingState';
+
+// Utilities and types
 import { mainServices, peopleData, subServices } from '../../utils/Constants';
-import { Artist, ClientInfo, MainService, ServiceStructure, SubService } from '../../utils/types';
-import { combineDateAndTime, getDeviceType } from '../../utils/utils';
+import { ClientInfo, ServiceStructure, SubService } from '../../utils/types';
+import { getDeviceType } from '../../utils/utils';
+
+// Components
 import BookingConfirmation from '../dialogs/BookingConfirmation';
 import BookingFail from '../dialogs/BookingFail';
 import BookingSuccess from '../dialogs/BookingSuccess';
@@ -15,6 +21,10 @@ import ClientInfoForm from './ClientInfoForm';
 import DateTimeSelection from './DatetimeSelection';
 import NavigationGuard from './NavigatioGuard';
 import ServiceSelection from './ServiceSelection';
+
+// Error boundary and loading state
+import { ErrorBoundary } from '../common/ErrorBoundary';
+import { OverlayLoadingState } from '../common/LoadingState';
 
 type ViewType = 'main' | 'new' | 'update' | 'cancel';
 
@@ -43,7 +53,6 @@ interface BookingSystemProps {
   prefillData?: any;
 }
 
-
 export default function BookingSystem({ 
   setView, 
   isUpdating, 
@@ -52,7 +61,27 @@ export default function BookingSystem({
   setConfirmationNumber,
   prefillData 
 }: BookingSystemProps) {
+  // Use the new useBookingState and useAPI hooks
+  const {
+    selectedServices, setServices,
+    selectedArtist, setArtist,
+    selectedDate, selectedTime, selectedTimeEnd,
+    clientInfo, setClientInfo,
+    totalDuration,
+    setDateTime,
+    isBookingComplete,
+    resetBooking
+  } = useBookingState();
+
+  const {
+    isLoading,
+    error,
+    createBooking,
+    updateBooking,
+    clearError
+  } = useAPI();
   
+  // Local UI state
   const [failureOpen, setFailureOpen] = useState(false);
   const [bookingError, setBookingError] = useState<string>('');
   const [confirmationOpen, setConfirmationOpen] = useState(false);
@@ -69,6 +98,60 @@ export default function BookingSystem({
     datetime: false,
     clientInfo: false
   });
+
+  // Initialize state from prefillData if updating
+  useEffect(() => {
+    if (isUpdating && prefillData) {
+      // Handle services
+      if (prefillData.serviceType) {
+        const services = parseServiceString(prefillData.serviceType);
+        setServices(services);
+      }
+
+      // Handle artist
+      if (prefillData.artist) {
+        setArtist(prefillData.artist);
+      }
+
+      // Handle date and time
+      if (prefillData.appointmentDateTime) {
+        const date = new Date(prefillData.appointmentDateTime);
+        
+        // Format time string
+        let hours = date.getHours();
+        const minutes = date.getMinutes();
+        const ampm = hours >= 12 ? 'pm' : 'am';
+        hours = hours % 12 || 12; // Convert to 12-hour format
+        
+        const timeStr = `${hours}${minutes > 0 ? `:${minutes}` : ''}${ampm}`;
+        
+        // Calculate end time based on duration
+        const endDate = new Date(date);
+        endDate.setMinutes(date.getMinutes() + prefillData.appointmentDuration);
+        
+        // Format end time
+        let endHours = endDate.getHours();
+        const endMinutes = endDate.getMinutes();
+        const endAmpm = endHours >= 12 ? 'pm' : 'am';
+        endHours = endHours % 12 || 12;
+        
+        const endTimeStr = `${endHours}${endMinutes > 0 ? `:${endMinutes}` : ''}${endAmpm}`;
+        
+        setDateTime(date, timeStr, endTimeStr);
+      }
+
+      // Handle client info
+      if (prefillData.clientName) {
+        setClientInfo({
+          name: prefillData.clientName,
+          emailId: prefillData.clientEmail,
+          phone: prefillData.clientPhone,
+          message: prefillData.appointmentNotes || '',
+          bookingDeviceType: prefillData.bookingDeviceType
+        });
+      }
+    }
+  }, [isUpdating, prefillData, setServices, setArtist, setDateTime, setClientInfo]);
   
   // Function to check all required fields
   const validateBookingFields = () => {
@@ -100,6 +183,7 @@ export default function BookingSystem({
     }
   };
 
+  // Group services by category
   const groupServicesByCategory = (services: SubService[]): ServiceStructure => {
     return services.reduce((acc: ServiceStructure, service: SubService) => {
       // Find the corresponding main service name
@@ -113,6 +197,7 @@ export default function BookingSystem({
     }, {});
   };
 
+  // Parse service string from API
   const parseServiceString = (serviceType: any): SubService[] => {
     // If serviceType is already an array of SubService objects
     if (Array.isArray(serviceType) && serviceType.length > 0 && 'id' in serviceType[0]) {
@@ -146,144 +231,46 @@ export default function BookingSystem({
     return [];
   };
   
-  
-  // Update the selectedServices state initialization
-const [selectedServices, setSelectedServices] = useState<SubService[]>(() => {
-  if (prefillData?.serviceType) {
-    return parseServiceString(prefillData.serviceType);
-  }
-  return [];
-}); 
-  
-  const [selectedArtist, setselectedArtist] = useState<string>(
-    prefillData?.artist || ''
-  );
-  const [selectedDate, setSelectedDate] = useState<Date | null>(
-    prefillData?.appointmentDateTime ? new Date(prefillData.appointmentDateTime) : null
-  );
-
-  // Update the selectedTime state initialization
-  const [selectedTime, setSelectedTime] = useState<string>(() => {
-    if (prefillData?.appointmentDateTime) {
-      const date = new Date(prefillData.appointmentDateTime);
-      // Format time to match the expected format (e.g., "2pm" or "11am")
-      let hours = date.getHours();
-      const ampm = hours >= 12 ? 'pm' : 'am';
-      hours = hours % 12 || 12; // Convert to 12-hour format
-      return `${hours}${ampm}`;
-    }
-    return '';
-  });
-
-  const [selectedTimeEnd, setSelectedTimeEnd] = useState<string>('')
-  
-  const [clientInfo, setClientInfo] = useState<ClientInfo>(
-    prefillData ? 
-      {
-        name: prefillData.clientName,
-        emailId: prefillData.clientEmail,
-        phone: prefillData.clientPhone,
-        message: prefillData.appointmentNotes
-       } 
-      : 
-      {
-        name: '',
-        emailId: '',
-        phone: '',
-        message: ''
-      }
-  );
-
+  // Expanded sections state for UI
   const [expandedSections, setExpandedSections] = useState({
     services: true,  // Always start with services expanded
     artist: isUpdating,  // Expand if updating
     datetime: isUpdating,
     clientInfo: isUpdating
   });
-
-  useEffect(() => {
-    if (isUpdating && prefillData) {
-      const services = parseServiceString(prefillData.serviceType);
-      setSelectedServices(services);
+  
+  // Filter available artists based on selected services
+  const availableArtists = useMemo(() => {
+    return peopleData.filter(person => {
+      const requiredServiceNames = selectedServices.map(service => {
+        const mainService = mainServices.find(ms => ms.id === service.mainServiceId);
+        return mainService?.name || '';
+      });
       
-      // Ensure all sections are expanded when updating
-      setExpandedSections({
-        services: true,
-        artist: true,
-        datetime: true,
-        clientInfo: true
-      });
-    }
-  }, [isUpdating, prefillData]);
-  
-  type FilterStrategy = 'id' | 'name';
-
-  // Generic template function
-  const filterArtistsByService = <T extends FilterStrategy>(
-    artists: Artist[],
-    services: SubService[],
-    strategy: T,
-    mainServicesList: MainService[]
-  ): Artist[] => {
-    return artists.filter(person => {
-      const requiredServices = services.map(service => {
-        // Ensure we're comparing strings
-        const mainServiceId = service.mainServiceId.toString();
-        const mainService = mainServicesList.find(ms => ms.id.toString() === mainServiceId);
-  
-        if (strategy === 'id') {
-          return mainServiceId;
-        } else {
-          return mainService?.name || '';
-        }
-      });
-  
-      const uniqueRequiredServices = Array.from(new Set(requiredServices));
+      const uniqueRequiredServices = Array.from(new Set(requiredServiceNames));
       
-      return uniqueRequiredServices.every(requiredService => {
-        if (strategy === 'id') {
-          const serviceName = mainServicesList.find(ms => ms.id.toString() === requiredService.toString())?.name;
-          return serviceName && (
-            person.serviceProvided.includes(serviceName) ||
-            person.serviceProvided.includes('all')
-          );
-        } else {
-          return person.serviceProvided.includes(requiredService as string) ||
-            person.serviceProvided.includes('all');
-        }
-      });
+      return uniqueRequiredServices.every(serviceName => 
+        person.serviceProvided.includes(serviceName as string) ||
+        person.serviceProvided.includes('all')
+      );
     });
+  }, [selectedServices]);
+
+  // Handle service selection
+  const handleServiceSelect = (services: SubService[]) => {    
+    setServices(services);
+    // Reset validation errors
+    setValidationErrors(prev => ({ ...prev, services: false }));
   };
-  
-  const availableArtists = filterArtistsByService(peopleData, selectedServices, 'name', mainServices);
-
-  // Validation
-  const isBookingValid = () =>
-    selectedServices.length > 0 &&
-    selectedArtist &&
-    selectedDate &&
-    selectedTime &&
-    clientInfo.name &&
-    (clientInfo.emailId || clientInfo.phone);
-
-    const handleServiceSelect = (services: SubService[]) => {    
-      setSelectedServices(services);
-      // Reset subsequent selections when services change
-      if (!isUpdating) {  // Only reset if not updating
-        setselectedArtist('');
-        setSelectedDate(null);
-        setSelectedTime('');
-      }
-    };
 
   // Handle artist selection
   const handleArtistSelect = (artist: string) => {
-    setselectedArtist(artist);
-    // Reset date and time when artist changes
-    setSelectedDate(null);
-    setSelectedTime('');
+    setArtist(artist);
+    // Reset validation errors
+    setValidationErrors(prev => ({ ...prev, artist: false }));
   };
 
+  // Handle booking button click
   const handleBookingClick = () => {
     if (validateBookingFields()) {
       setConfirmationOpen(true);
@@ -292,235 +279,275 @@ const [selectedServices, setSelectedServices] = useState<SubService[]>(() => {
     }
   };
 
+  // Style for elements with validation errors
   const getErrorStyle = (hasError: boolean) => ({
     border: hasError ? '1px solid #d32f2f' : undefined,
     boxShadow: hasError ? '0 0 0 1px #d32f2f' : undefined,
     position: 'relative' as const
   });  
-  
-  const totalDuration = selectedServices.reduce((total, service) => total + service.duration, 0);
 
-    const handleConfirm = async () => {    
-    let selectedDateTime = combineDateAndTime(selectedDate, selectedTime);
-    let selectedDateTimeEnd = combineDateAndTime(selectedDate, selectedTimeEnd)
-    clientInfo.bookingDeviceType = getDeviceType();  
-      
-    const result = isUpdating ?
-                    await updateBooking(
-                      selectedServices, 
-                      selectedArtist, 
-                      selectedDateTime, 
-                      selectedDateTimeEnd,
-                      totalDuration,
-                      clientInfo, 
-                      prefillData?.id, 
-                      confirmationNumber
-                    )
-                    :
-                    await postBooking(
-                      selectedServices, 
-                      selectedArtist, 
-                      selectedDateTime, 
-                      selectedDateTimeEnd,
-                      totalDuration, 
-                      clientInfo
-                    )    
+  // Handle confirmation and booking submission
+  const handleConfirm = async () => {
+    if (!selectedDate || !selectedTime || !selectedTimeEnd || !selectedArtist) {
+      return;
+    }
     
-    if (result.success) {
-      setConfirmationOpen(false);
-      setSuccessOpen(true);
-      if(result.data){        
-        setConfirmationNumber(result.data["confirmationCode"].toString())              
-      }      
+    // Set device type
+    const updatedClientInfo = {
+      ...clientInfo,
+      bookingDeviceType: getDeviceType()
+    };
+    setClientInfo(updatedClientInfo);
+    
+    try {
+      let result;
       
-    } else {
-      setBookingError(result.error || 'Failed to book appointment');
+      if (isUpdating && prefillData?.id) {
+        // Update existing booking
+        result = await updateBooking(
+          prefillData.id,
+          selectedServices,
+          selectedArtist,
+          selectedDate,
+          selectedTime,
+          selectedTimeEnd,
+          updatedClientInfo,
+          confirmationNumber || ''
+        );
+      } else {        
+        // Create new booking
+        result = await createBooking(
+          selectedServices,
+          selectedArtist,
+          selectedDate,
+          selectedTime,
+          selectedTimeEnd,
+          updatedClientInfo
+        );
+      }
+      
+      if (result) {
+        setConfirmationOpen(false);
+        setSuccessOpen(true);
+        setConfirmationNumber(result.confirmationCode.toString());
+      } else {
+        setBookingError(error || 'Failed to process booking');
+        setConfirmationOpen(false);
+        setFailureOpen(true);
+      }
+    } catch (err) {
+      setBookingError(err instanceof Error ? err.message : 'An unexpected error occurred');
       setConfirmationOpen(false);
       setFailureOpen(true);
     }
-  };  
+  };
 
-  const handleSelectedTime = (time:string, endTime: string) =>{
-    setSelectedTime(time)
-    setSelectedTimeEnd(endTime)
-  }
+  // Handle time selection
+  const handleSelectedTime = (time: string, endTime: string) => {
+    if (selectedDate) {
+      setDateTime(selectedDate, time, endTime);
+      // Reset validation errors
+      setValidationErrors(prev => ({ ...prev, datetime: false }));
+    }
+  };
+  
+  // Handle client info changes
+  const handleClientInfoChange = (info: Partial<ClientInfo>) => {
+    setClientInfo({ ...clientInfo, ...info });
+    // Reset validation errors for client info
+    if (info.name || info.emailId || info.phone) {
+      setValidationErrors(prev => ({ ...prev, clientInfo: false }));
+    }
+  };
 
   return (
-    <Box sx={{ maxWidth: 768, mx: 'auto', p: 2 }}>
-          <NavigationGuard></NavigationGuard>
+    <ErrorBoundary>
+      <Box sx={{ maxWidth: 768, mx: 'auto', p: 2, position: 'relative' }}>
+        <NavigationGuard />
 
-      <IconButton 
-        onClick={onCancel}
-        sx={{ 
-          position: 'absolute',
-          left: 16,
-          top: 16,
-          zIndex:'1', 
-          backgroundColor: '#d7d3d3',
-          '&:hover': {
-            backgroundColor: '#f3f4f6'
-          }
-        }}
-      >
-        <ArrowBackIcon/>
-      </IconButton>
-      
-      {/* Services Selection */}
-      <Box sx={{ mb: 2 }}>
-      <ServiceSelection 
-                 services={groupServicesByCategory(subServices)}
-                 selectedServices={selectedServices}
-                 onServiceSelect={handleServiceSelect}
-                 isExpanded={true}
-                 hasError={validationErrors.services}
-                 errorStyle={getErrorStyle(validationErrors.services)}
-      />
-      </Box>
+        {/* Loading overlay */}
+        {isLoading && <OverlayLoadingState message={isUpdating ? "Updating appointment..." : "Creating appointment..."} />}
 
-      {(expandedSections.services || selectedServices.length > 0) && (
-        <>
-          {/* Artist Selection */}
-          <Box sx={{ mb: 2 }}>
-          <ArtistSelection
-             availableArtists={availableArtists}
-             selectedArtist={selectedArtist}
-             onPersonSelect={handleArtistSelect}
-             isExpanded={expandedSections.artist}
-             hasError={validationErrors.artist}
-             errorStyle={getErrorStyle(validationErrors.artist)}
+        {/* Back button */}
+        <IconButton 
+          onClick={onCancel}
+          sx={{ 
+            position: 'absolute',
+            left: 16,
+            top: 16,
+            zIndex: 1, 
+            backgroundColor: '#d7d3d3',
+            '&:hover': {
+              backgroundColor: '#f3f4f6'
+            }
+          }}
+        >
+          <ArrowBackIcon/>
+        </IconButton>
+        
+        {/* Services Selection */}
+        <Box sx={{ mb: 2 }}>
+          <ServiceSelection 
+            services={groupServicesByCategory(subServices)}
+            selectedServices={selectedServices}
+            onServiceSelect={handleServiceSelect}
+            isExpanded={true}
+            hasError={validationErrors.services}
+            errorStyle={getErrorStyle(validationErrors.services)}
           />
         </Box>
 
-
-          {(expandedSections.artist || selectedArtist) && (
-            <>
-              {/* Date & Time Selection */}
-              <Box sx={{ mb: 2 }}>
-              <DateTimeSelection
-                 selectedArtist={peopleData.find(p => p.name === selectedArtist) || null}
-                 selectedDate={selectedDate}
-                 selectedTime={selectedTime}
-                 displayMonth={displayMonth}
-                 onDateSelect={setSelectedDate}
-                 onTimeSelect={handleSelectedTime}
-                 onMonthChange={setDisplayMonth}
-                 isExpanded={expandedSections.datetime}
-                 hasError={validationErrors.datetime}
-                 errorStyle={getErrorStyle(validationErrors.datetime)}
-                 appointmentDuration={totalDuration}
+        {(expandedSections.services || selectedServices.length > 0) && (
+          <>
+            {/* Artist Selection */}
+            <Box sx={{ mb: 2 }}>
+              <ArtistSelection
+                availableArtists={availableArtists}
+                selectedArtist={selectedArtist || ''}
+                onPersonSelect={handleArtistSelect}
+                isExpanded={expandedSections.artist}
+                hasError={validationErrors.artist}
+                errorStyle={getErrorStyle(validationErrors.artist)}
               />
             </Box>
 
-              {/* User Information */}
-              {(expandedSections.datetime || (selectedDate && selectedTime)) && (
+            {(expandedSections.artist || selectedArtist) && (
+              <>
+                {/* Date & Time Selection */}
                 <Box sx={{ mb: 2 }}>
-                  <ClientInfoForm
-                    clientInfo={clientInfo}
-                    onClientInfoChange={setClientInfo}
-                    isExpanded={expandedSections.clientInfo}
-                    hasError={validationErrors.clientInfo}
-                    errorStyle={getErrorStyle(validationErrors.clientInfo)}
+                  <DateTimeSelection
+                    selectedArtist={peopleData.find(p => p.name === selectedArtist) || null}
+                    selectedDate={selectedDate}
+                    selectedTime={selectedTime}
+                    displayMonth={displayMonth}
+                    onDateSelect={(date) => setDateTime(date, selectedTime || '', selectedTimeEnd || '')}
+                    onTimeSelect={handleSelectedTime}
+                    onMonthChange={setDisplayMonth}
+                    isExpanded={expandedSections.datetime}
+                    hasError={validationErrors.datetime}
+                    errorStyle={getErrorStyle(validationErrors.datetime)}
+                    appointmentDuration={totalDuration}
                   />
                 </Box>
+
+                {/* User Information */}
+                {/* User Information */}
+                {(expandedSections.datetime || (selectedDate && selectedTime)) && (
+                  <Box sx={{ mb: 2 }}>
+                    <ClientInfoForm
+                      clientInfo={clientInfo}
+                      onClientInfoChange={handleClientInfoChange}
+                      validationErrors={{
+                        name: validationErrors.clientInfo ? "Name is required" : undefined,
+                        emailId: validationErrors.clientInfo ? "Email or phone is required" : undefined,
+                        phone: validationErrors.clientInfo ? "Email or phone is required" : undefined
+                      }}
+                    />
+                  </Box>
+                )}
+              </>
+            )}      
+
+            {/* Booking Summary */}
+            <Box sx={{ mb: 2 }}>
+              <BookingSummary
+                selectedServices={selectedServices}
+                services={groupServicesByCategory(subServices)}
+                selectedArtist={selectedArtist || ''}
+                selectedDate={selectedDate}
+                selectedTime={selectedTime}
+              />
+            </Box>
+
+            {/* Action Buttons */}
+            <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
+              {onCancel && (
+                <Button
+                  fullWidth
+                  variant="outlined"
+                  onClick={onCancel}
+                  sx={{
+                    borderColor: '#000000',
+                    color: '#000000',
+                    '&:hover': {
+                      borderColor: '#2b2b2b',
+                      backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    }
+                  }}
+                >
+                  Cancel
+                </Button>
               )}
-            </>
-          )}      
 
-          {/* Booking Summary */}
-          <Box sx={{ mb: 2 }}>
-            <BookingSummary
-              selectedServices={selectedServices}
-              services={groupServicesByCategory(subServices)}
-              selectedArtist={selectedArtist}
-              selectedDate={selectedDate}
-              selectedTime={selectedTime}
-            />
-          </Box>
-
-          <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
-            {onCancel && (
               <Button
                 fullWidth
-                variant="outlined"
-                onClick={onCancel}
+                variant="contained"
+                onClick={handleBookingClick}
+                disabled={isLoading}
                 sx={{
-                  borderColor: '#000000',
-                  color: '#000000',
+                  backgroundColor: '#000000',
                   '&:hover': {
-                    borderColor: '#2b2b2b',
-                    backgroundColor: 'rgba(0, 0, 0, 0.04)'
+                    backgroundColor: '#2b2b2b'
+                  },
+                  '&.Mui-disabled': {
+                    backgroundColor: '#cccccc'
                   }
                 }}
               >
-                Cancel
+                {isUpdating ? 'Update Booking' : 'Complete Booking'}
               </Button>
+            </Box>
+
+            {/* Validation Errors */}
+            {Object.values(validationErrors).some(error => error) && (
+              <Alert severity="error" sx={{ mt: 2 }}>
+                <AlertTitle>Please complete all required fields</AlertTitle>
+                {validationErrors.services && <div>• Select at least one service</div>}
+                {validationErrors.artist && <div>• Choose an artist</div>}
+                {validationErrors.datetime && <div>• Select date and time</div>}
+                {validationErrors.clientInfo && <div>• Complete contact information</div>}
+              </Alert>
             )}
 
-            <Button
-              fullWidth
-              variant="contained"
-              onClick={handleBookingClick}
-              sx={{
-                backgroundColor: '#000000',
-                '&:hover': {
-                  backgroundColor: '#2b2b2b'
-                },
-                '&.Mui-disabled': {
-                  backgroundColor: '#cccccc'
-                }
-              }}
-            >
-              {isUpdating ? 'Update Booking' : 'Complete Booking'}
-            </Button>
-          </Box>
+            {/* Dialogs */}
+            {isBookingComplete && (
+              <>
+                <BookingConfirmation
+                  open={confirmationOpen}
+                  onClose={() => setConfirmationOpen(false)}
+                  onConfirm={handleConfirm}
+                  selectedServices={selectedServices}
+                  services={groupServicesByCategory(subServices)}
+                  selectedArtist={selectedArtist!}
+                  selectedDate={selectedDate!}
+                  selectedTime={selectedTime!}
+                  clientInfo={clientInfo}
+                />
 
-          {Object.values(validationErrors).some(error => error) && (
-            <Alert severity="error" sx={{ mt: 2 }}>
-              <AlertTitle>Please complete all required fields</AlertTitle>
-              {validationErrors.services && <div>• Select at least one service</div>}
-              {validationErrors.artist && <div>• Choose an artist</div>}
-              {validationErrors.datetime && <div>• Select date and time</div>}
-              {validationErrors.clientInfo && <div>• Complete contact information</div>}
-            </Alert>
-          )}
+                <BookingSuccess
+                  open={successOpen}
+                  setView={() => setView('main')}
+                  bookingDetails={{
+                    confirmationNumber: confirmationNumber,
+                    name: clientInfo.name,
+                    date: selectedDate!,
+                    time: selectedTime!,
+                    email: clientInfo.emailId,
+                    phone: clientInfo.phone
+                  }}
+                />
 
-    {isBookingValid() && (
-            <>
-              <BookingConfirmation
-                open={confirmationOpen}
-                onClose={() => setConfirmationOpen(false)}
-                onConfirm={handleConfirm}
-                selectedServices={selectedServices}
-                services={groupServicesByCategory(subServices)}
-                selectedArtist={selectedArtist!}
-                selectedDate={selectedDate!}
-                selectedTime={selectedTime!}
-                clientInfo={clientInfo}
-              />
-
-              <BookingSuccess
-                open={successOpen}
-                setView={() => setView('main')}
-                bookingDetails={{
-                  confirmationNumber: confirmationNumber,
-                  name: clientInfo.name,
-                  date: selectedDate!,
-                  time: selectedTime!,
-                  email: clientInfo.emailId,
-                  phone: clientInfo.phone
-                }}
-              />
-
-          <BookingFail
-                open={failureOpen}
-                setView={()=>setView('main')}
-                error={bookingError}
-                clientInfo={clientInfo}
-              />
-        </>
-      )}
-        </>
-      )}
-    </Box>
+                <BookingFail
+                  open={failureOpen}
+                  setView={() => setView('main')}
+                  error={bookingError}
+                  clientInfo={clientInfo}
+                />
+              </>
+            )}
+          </>
+        )}
+      </Box>
+    </ErrorBoundary>
   );
 }

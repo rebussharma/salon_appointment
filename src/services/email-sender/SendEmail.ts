@@ -1,5 +1,5 @@
 import emailjs from '@emailjs/browser';
-import { ClientInfo, emailProps } from '../types';
+import { ClientInfo, emailProps } from '../../utils/types';
 
 const TEMPLATE_ID_SELF = "template_wthysze";
 const SERVICE_ID = "service_hr7wfln";

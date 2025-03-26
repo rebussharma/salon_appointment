@@ -1,66 +1,72 @@
 // src/services/api.ts
 import axios, { AxiosError } from 'axios';
-import { AppointmentData, ClientInfo, SubService } from '../utils/types';
+import { AppointmentData, ClientInfo, DateTimeDto, SubService } from '../utils/types';
 
+// Base API configuration
 const API_BASE_URL = 'http://localhost:8080/api';
+const APPOINTMENTS_URL = `${API_BASE_URL}/appointments`;
+const UPCOMING_APPT_URL = `${APPOINTMENTS_URL}/confirmed/upcoming/`;
 
-interface ApiResponse<T> {
+// Enhanced axios instance with defaults
+const apiClient = axios.create({
+  baseURL: API_BASE_URL,
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  timeout: 10000, // 10 second timeout
+});
+
+// Define error and response interfaces
+export interface ApiError {
+  message: string;
+  statusCode?: number;
+  source?: string;
+  originalError?: any;
+}
+
+export interface ApiResponse<T> {
   success: boolean;
   data?: T;
   error?: string;
+  errorSource?: string;
 }
 
-class ApiError extends Error {
-  constructor(
-    message: string,
-    public statusCode?: number,
-    public response?: any
-  ) {
-    super(message);
-    this.name = 'ApiError';
-  }
-}
-
-// Define proper error response type
-interface ErrorResponse {
-  message?: string;
-  error?: string;
-  [key: string]: any;
-}
-
-const handleApiError = (error: unknown): never => {
+// Error handling utility function
+const handleApiError = (error: any, source = 'api'): ApiError => {
   if (axios.isAxiosError(error)) {
-    const axiosError = error as AxiosError<ErrorResponse>;
-    const errorMessage = 
-      axiosError.response?.data?.message || 
-      axiosError.response?.data?.error || 
-      'An error occurred';
-    
-    throw new ApiError(
-      errorMessage,
-      axiosError.response?.status,
-      axiosError.response?.data
-    );
+    const axiosError = error as AxiosError<any>;
+    return {
+      message: axiosError.response?.data?.message || axiosError.message || 'An error occurred',
+      statusCode: axiosError.response?.status,
+      source,
+      originalError: error
+    };
   }
-  throw new ApiError('An unexpected error occurred');
+  
+  return {
+    message: error?.message || 'An unexpected error occurred',
+    source,
+    originalError: error
+  };
 };
 
+// API service with all endpoints
 const api = {
   appointments: {
+    /**
+     * Create a new appointment
+     */
     create: async (
       selectedServices: SubService[],
       selectedArtist: string,
-      selectedDateTime: string,
-      selectedDateTimeEnd: string,
+      appointmentDateTime: DateTimeDto,
       appointmentDuration: number,
       clientInfo: ClientInfo
     ): Promise<ApiResponse<AppointmentData>> => {
       try {
-        const response = await axios.post(`${API_BASE_URL}/appointments`, {
-          appointmentDateTime: selectedDateTime,
-          appointmentDateTimeStart: selectedDateTime,
-          appointmentDateTimeEnd: selectedDateTimeEnd,
-          appointmentDuration,
+        const dataToPost = {
+          appointmentDateTimeDetails: appointmentDateTime,
+          appointmentDuration: appointmentDuration,
           serviceType: selectedServices,
           artist: selectedArtist,
           appointmentStatus: "confirmed",
@@ -69,33 +75,36 @@ const api = {
           clientPhone: clientInfo.phone,
           appointmentNotes: clientInfo.message,
           bookingDeviceType: clientInfo.bookingDeviceType
-        });
-
+        };
+        console.log("dataP", dataToPost);
+        
+        const response = await apiClient.post('/appointments', dataToPost);
         return { success: true, data: response.data };
       } catch (error) {
+        const apiError = handleApiError(error, 'create_appointment');
         return {
           success: false,
-          error: error instanceof ApiError ? error.message : 'Failed to book appointment'
+          error: apiError.message
         };
       }
     },
 
+    /**
+     * Update an existing appointment
+     */
     update: async (
       id: number,
       selectedServices: SubService[],
       selectedArtist: string,
-      selectedDateTime: string,
-      selectedDateTimeEnd: string,
+      appointmentDateTime: DateTimeDto,
       appointmentDuration: number,
       clientInfo: ClientInfo,
-      confirmationCode: string
+      confirmationCode: string | null | undefined
     ): Promise<ApiResponse<AppointmentData>> => {
       try {
-        const response = await axios.put(`${API_BASE_URL}/appointments/${id}`, {
-          appointmentDateTime: selectedDateTime,
-          appointmentDateTimeStart: selectedDateTime,
-          appointmentDateTimeEnd: selectedDateTimeEnd,
-          appointmentDuration,
+        const dataToPost = {
+          appointmentDateTimeDetails: appointmentDateTime,
+          appointmentDuration: appointmentDuration,
           serviceType: selectedServices,
           artist: selectedArtist,
           appointmentStatus: "confirmed",
@@ -104,40 +113,144 @@ const api = {
           clientPhone: clientInfo.phone,
           appointmentNotes: clientInfo.message,
           bookingDeviceType: clientInfo.bookingDeviceType,
-          confirmationCode
-        });
+          confirmationCode: confirmationCode
+        };
 
+        const response = await apiClient.put(`/appointments/${id}`, dataToPost);
         return { success: true, data: response.data };
       } catch (error) {
+        const apiError = handleApiError(error, 'update_appointment');
         return {
           success: false,
-          error: error instanceof ApiError ? error.message : 'Failed to update appointment'
+          error: apiError.message
         };
       }
     },
 
-    cancel: async (id: number): Promise<ApiResponse<void>> => {
+    /**
+     * Cancel an appointment
+     */
+    cancel: async (
+      data: AppointmentData
+    ): Promise<ApiResponse<AppointmentData>> => {
       try {
-        await axios.put(`${API_BASE_URL}/appointments/${id}`, {
-          appointmentStatus: "cancelled"
-        });
+        const updatedData = { ...data, appointmentStatus: "cancelled" };
+        const response = await apiClient.put(`/appointments/${data.id}`, updatedData);
+        return { success: true, data: response.data };
+      } catch (error) {
+        const apiError = handleApiError(error, 'pushCancelData');
+        return {
+          success: false,
+          error: apiError.message,
+          errorSource: 'pushCancelData'
+        };
+      }
+    },
+
+    /**
+     * Get an appointment by confirmation code
+     */
+    getByConfirmationCode: async (
+      confirmationNumber: string,
+      view?: string
+    ): Promise<ApiResponse<AppointmentData>> => {
+      try {
+        const response = await apiClient.get(`${UPCOMING_APPT_URL}${confirmationNumber}`);
+        return {
+          success: true,
+          data: {
+            data_insertion_date: response.data.data_insertion_date,
+            confirmationCode: response.data.confirmationCode,
+            appointmentDateTime: response.data.appointmentDateTime,
+            appointmentDuration: response.data.appointmentDuration,
+            serviceType: response.data.serviceType,
+            artist: response.data.artist,
+            clientName: response.data.clientName,
+            clientEmail: response.data.clientEmail,
+            clietnPhone: response.data.clietnPhone,
+            appointmentNotes: response.data.appointmentNotes,
+            appointmentStatus: response.data.appointmentStatus,
+            id: response.data.id
+          }
+        };
+      } catch (error) {
+        const apiError = handleApiError(error, 'getAppointmentByConfirmationCode');
+        return {
+          success: false,
+          error: apiError.message,
+          errorSource: 'getAppointmentByConfirmationCode'
+        };
+      }
+    },
+
+    /**
+     * Get all upcoming confirmed appointments
+     */
+    getUpcomingConfirmedAppointments: async (): Promise<ApiResponse<AppointmentData[]>> => {
+      try {
+        const response = await apiClient.get(UPCOMING_APPT_URL);
+        return { success: true, data: response.data };
+      } catch (error) {
+        const apiError = handleApiError(error, 'getUpcomingConfirmedAppointment');
+        return {
+          success: false,
+          error: apiError.message
+        };
+      }
+    },
+
+    /**
+     * Get name and datetime of upcoming confirmed appointments
+     */
+    getUpcomingConfirmedAppointmentNameAndDateTime: async (): Promise<ApiResponse<any[]>> => {
+      try {
+        const response = await apiClient.get(`${UPCOMING_APPT_URL}artist-date-time`);
+        return { success: true, data: response.data };
+      } catch (error) {
+        const apiError = handleApiError(error, 'getUpcomingConfirmedAppointmentNameAndDateTime');
+        return {
+          success: false,
+          error: apiError.message
+        };
+      }
+    },
+
+    /**
+     * Handle full appointment cancellation flow
+     */
+    handleAppointmentCancellation: async (
+      confirmationNumber: string
+    ): Promise<{ success: boolean; errorSource?: string }> => {
+      try {
+        // Get appointment details
+        const appointmentResult = await api.appointments.getByConfirmationCode(confirmationNumber);
+        
+        if (!appointmentResult.success || !appointmentResult.data) {
+          return {
+            success: false,
+            errorSource: 'getAppointmentByConfirmationCode'
+          };
+        }
+
+        // Cancel the appointment
+        const cancelResult = await api.appointments.cancel(appointmentResult.data);
+        
+        if (!cancelResult.success) {
+          return {
+            success: false,
+            errorSource: 'pushCancelData'
+          };
+        }
+
+        // Currently email sending is commented out in the original code
+        // If needed, email handling can be added here
+
         return { success: true };
       } catch (error) {
+        const apiError = handleApiError(error, 'handleAppointmentCancellation');
         return {
           success: false,
-          error: error instanceof ApiError ? error.message : 'Failed to cancel appointment'
-        };
-      }
-    },
-
-    getByConfirmation: async (code: string): Promise<ApiResponse<AppointmentData>> => {
-      try {
-        const response = await axios.get(`${API_BASE_URL}/appointments/confirmed/upcoming/${code}`);
-        return { success: true, data: response.data };
-      } catch (error) {
-        return {
-          success: false,
-          error: error instanceof ApiError ? error.message : 'Failed to fetch appointment'
+          errorSource: apiError.source
         };
       }
     }
