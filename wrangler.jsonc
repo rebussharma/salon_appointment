@@ -1,5 +1,5 @@
 {
-    "name": "worker-name",
+    "name": "book",
     "compatibility_date": "2025-03-26",
     "main": "src/index.tsx"
 }
