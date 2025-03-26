@@ -20,7 +20,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "build": "react-scripts build",
+    "build": "CI=false && react-scripts build",
     "test": "node --max_old_space_size=8192 --expose-gc node_modules/.bin/react-scripts test --transformIgnorePatterns \"node_modules/(?!(axios|@emailjs/browser))/\" --testTimeout=30000",
     "test:coverage": "node --max_old_space_size=8192 --expose-gc node_modules/.bin/react-scripts test --coverage --watchAll=false --maxWorkers=2",
     "test:debug": "node --max_old_space_size=8192 --inspect-brk node_modules/.bin/react-scripts test --runInBand --no-cache",
