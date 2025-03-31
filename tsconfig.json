@@ -20,10 +20,6 @@
     "noEmit": true,
     "jsx": "react-jsx"
   },
-  "typeRoots": [
-      "./node_modules/@types",
-      "./src/utils"  // or just "./types.d.ts" if at root
-    ],
   "include": [
     "src", "src/**/*"
   ]
