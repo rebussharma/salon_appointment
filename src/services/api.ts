@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { AppointmentData, ClientInfo, DateTimeDto, SubService } from '../utils/types';
 
 // Base API configuration
-const API_BASE_URL = 'http://localhost:8080/api';
+const API_BASE_URL = 'https://salon-appointment-backend.onrender.com/api';
 const APPOINTMENTS_URL = `${API_BASE_URL}/appointments`;
 const UPCOMING_APPT_URL = `${APPOINTMENTS_URL}/confirmed/upcoming/`;
 
@@ -76,8 +76,7 @@ const api = {
           appointmentNotes: clientInfo.message,
           bookingDeviceType: clientInfo.bookingDeviceType
         };
-        console.log("dataP", dataToPost);
-        
+        console.log("data to post", dataToPost);        
         const response = await apiClient.post('/appointments', dataToPost);
         return { success: true, data: response.data };
       } catch (error) {
