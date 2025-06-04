@@ -3,7 +3,7 @@ import axios, { AxiosError } from 'axios';
 import { AppointmentData, ClientInfo, DateTimeDto, SubService } from '../utils/types';
 
 // Base API configuration
-const API_BASE_URL = 'https://salon-appointment-backend.onrender.com/api';
+const API_BASE_URL = '/api'; // Cloudfare worker is deployed as proxy which takes care of rest URL
 const APPOINTMENTS_URL = `${API_BASE_URL}/appointments`;
 const UPCOMING_APPT_URL = `${APPOINTMENTS_URL}/confirmed/upcoming/`;
 
