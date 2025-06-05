@@ -4,8 +4,7 @@ import { AppointmentData, ClientInfo, DateTimeDto, SubService } from '../utils/t
 
 // Base API configuration
 const API_BASE_URL = '/api'; // Cloudfare worker is deployed as proxy which takes care of rest URL
-const APPOINTMENTS_URL = `${API_BASE_URL}/appointments`;
-const UPCOMING_APPT_URL = `${APPOINTMENTS_URL}/confirmed/upcoming/`;
+const UPCOMING_APPT_URL = 'appointments/confirmed/upcoming/';
 
 // Enhanced axios instance with defaults
 const apiClient = axios.create({
