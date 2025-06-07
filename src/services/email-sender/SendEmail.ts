@@ -1,10 +1,14 @@
 import emailjs from '@emailjs/browser';
 import { ClientInfo, emailProps } from '../../utils/types';
 
-const TEMPLATE_ID_SELF = "template_wthysze";
-const SERVICE_ID = "service_hr7wfln";
-const TEMPLATE_ID = "template_y1syqfc";
-const PUBLIC_KEY = "48zrrLrcyVtY6tuNs";
+const TEMPLATE_ID_SELF =  process.env.REACT_APP_EMAIL_TEMPLATE_ID_SELF;
+const SERVICE_ID =  process.env.REACT_APP_EMAIL_SERVICE_ID;
+const TEMPLATE_ID =  process.env.REACT_APP_EMAIL_TEMPLATE_ID;
+const PUBLIC_KEY =  process.env.REACT_APP_EMAIL_PUBLIC_KEY;
+
+if (!TEMPLATE_ID_SELF || !SERVICE_ID || !TEMPLATE_ID|| !PUBLIC_KEY){
+    throw new Error("EMAIL SENDER KEYS NOT DEFINED")
+}
 
 export const SendEmail = ({ clientDetails, appointmentDetails }: emailProps) => {
     const apptDateTime = new Date(appointmentDetails.appointmentDateTime.toString());

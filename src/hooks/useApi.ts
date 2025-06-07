@@ -17,9 +17,10 @@ interface UseAPIReturn extends UseAPIState {
     selectedDate: Date,
     selectedTime: string,
     selectedTimeEnd: string,
-    clientInfo: ClientInfo
+    clientInfo: ClientInfo,
+    captchaToken: any
   ) => Promise<AppointmentData | null>;
-  
+
   updateBooking: (
     id: number,
     selectedServices: SubService[],
@@ -112,7 +113,8 @@ export const useAPI = (): UseAPIReturn => {
     selectedDate: Date,
     selectedTime: string,
     selectedTimeEnd: string,
-    clientInfo: ClientInfo
+    clientInfo: ClientInfo,
+    captchaToken: any
   ): Promise<AppointmentData | null> => {
     startLoading();
     
@@ -131,7 +133,8 @@ export const useAPI = (): UseAPIReturn => {
         selectedArtist,
         appointmentDateTime,
         appointmentDuration,
-        clientInfo
+        clientInfo,
+        captchaToken
       );
 
       if (result.success && result.data) {

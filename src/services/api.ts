@@ -5,12 +5,13 @@ import { AppointmentData, ClientInfo, DateTimeDto, SubService } from '../utils/t
 // Base API configuration
 const API_BASE_URL = '/api'; // Cloudfare worker is deployed as proxy which takes care of rest URL
 const UPCOMING_APPT_URL = 'appointments/confirmed/upcoming/';
+const auth_token = process.env.REACR_APP_API_TOEKN
 
 // Enhanced axios instance with defaults
 const apiClient = axios.create({
   baseURL: API_BASE_URL,
   headers: {
-    'Content-Type': 'application/json',
+    'Content-Type': 'application/json'
   },
   timeout: 10000, // 10 second timeout
 });
@@ -60,7 +61,8 @@ const api = {
       selectedArtist: string,
       appointmentDateTime: DateTimeDto,
       appointmentDuration: number,
-      clientInfo: ClientInfo
+      clientInfo: ClientInfo,
+      captchaToken: any
     ): Promise<ApiResponse<AppointmentData>> => {
       try {
         const dataToPost = {
@@ -73,7 +75,8 @@ const api = {
           clientEmail: clientInfo.emailId,
           clientPhone: clientInfo.phone,
           appointmentNotes: clientInfo.message,
-          bookingDeviceType: clientInfo.bookingDeviceType
+          bookingDeviceType: clientInfo.bookingDeviceType,
+          captchaToken: captchaToken
         };
         console.log("data to post", dataToPost);        
         const response = await apiClient.post('/appointments', dataToPost);

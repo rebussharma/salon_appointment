@@ -5,6 +5,8 @@
 /book
 /.pnp
 .pnp.js
+.env
+.evn.local
 
 # testing
 /coverage

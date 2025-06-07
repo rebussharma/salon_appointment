@@ -1,5 +1,13 @@
 {
       "name": "book",
       "compatibility_date": "2025-03-31",
-      "main": "src/index.tsx"
+      "main": "src/index.tsx",
+      "vars": {
+            "REACT_APP_API_TOKEN":"119C7025-E691-4395-A44D-2A0A0B2EFF16",
+            "REACT_APP_EMAIL_TEMPLATE_ID_SELF":"template_wthysze",
+            "REACT_APP_EMAIL_SERVICE_ID":"service_hr7wfln",
+            "REACT_APP_EMAIL_TEMPLATE_ID":"template_y1syqfc",
+            "REACT_APP_EMAIL_PUBLIC_KEY":"48zrrLrcyVtY6tuNs",
+            "REACT_APP_TURNSTILE_SITE_KEY":"0x4AAAAAABgPGqPCYUNdA_My"
+      }
  }

@@ -1,6 +1,6 @@
 import { ArrowBack as ArrowBackIcon, Warning as WarningIcon } from '@mui/icons-material';
 import { Alert, AlertTitle, Box, Button, IconButton } from '@mui/material';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 
 // Import new hooks instead of individual API functions
 import { useAPI } from '../../hooks/useApi';
@@ -25,6 +25,7 @@ import ServiceSelection from './ServiceSelection';
 // Error boundary and loading state
 import { ErrorBoundary } from '../common/ErrorBoundary';
 import { OverlayLoadingState } from '../common/LoadingState';
+import CaptchaComponent from '../../services/Captcha';
 
 type ViewType = 'main' | 'new' | 'update' | 'cancel';
 
@@ -82,6 +83,10 @@ export default function BookingSystem({
   } = useAPI();
   
   // Local UI state
+  const [captchaSuccess, setCaptchaSuccess] = useState<any | null>(null);
+  const [captchaTimeStamp, setCaptchaTimeStamp] = useState<any | null>(null);
+  const [widgetId, setWidgetId] = useState<any | null>(null);
+
   const [failureOpen, setFailureOpen] = useState(false);
   const [bookingError, setBookingError] = useState<string>('');
   const [confirmationOpen, setConfirmationOpen] = useState(false);
@@ -152,7 +157,7 @@ export default function BookingSystem({
       }
     }
   }, [isUpdating, prefillData, setServices, setArtist, setDateTime, setClientInfo]);
-  
+
   // Function to check all required fields
   const validateBookingFields = () => {
     const errors = {
@@ -270,13 +275,27 @@ export default function BookingSystem({
     setValidationErrors(prev => ({ ...prev, artist: false }));
   };
 
+  const isTokenValid = () => {
+    return captchaSuccess && Date.now() - captchaTimeStamp < 120_000;
+  };
+
   // Handle booking button click
   const handleBookingClick = () => {
+    if (!isTokenValid){
+      if (widgetId && window.turnstile) {
+        window.turnstile.execute(widgetId); // Re-trigger CAPTCHA
+        return;
+      } else {
+        alert("CAPTCHA not ready");
+        return;
+      }
+    }
     if (validateBookingFields()) {
       setConfirmationOpen(true);
     } else {
       scrollToError();
     }
+  
   };
 
   // Style for elements with validation errors
@@ -322,7 +341,8 @@ export default function BookingSystem({
           selectedDate,
           selectedTime,
           selectedTimeEnd,
-          updatedClientInfo
+          updatedClientInfo,
+          captchaSuccess
         );
       }
       
@@ -458,6 +478,13 @@ export default function BookingSystem({
                 selectedTime={selectedTime}
               />
             </Box>
+            
+            {/* Cloudfare turnstile to handle captcha*/}
+            <CaptchaComponent 
+                onSuccess={(token) => setCaptchaSuccess(token)} 
+                setCaptchaTimeStamp={(stamp) => setCaptchaTimeStamp(stamp)}
+                setWidgetId={(id)=>setWidgetId(id)}
+            />
 
             {/* Action Buttons */}
             <Box sx={{ display: 'flex', gap: 2, mt: 2 }}>
