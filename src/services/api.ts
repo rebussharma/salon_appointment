@@ -12,23 +12,33 @@ const apiClient = axios.create({
   timeout: 10000
 });
 
-apiClient.interceptors.request.use((config) => {
-  const auth_token = process.env.REACT_APP_API_BEARER_TOKEN
+// Attach token to every request
+apiClient.interceptors.request.use(
+  (config) => {
+    const auth_token = process.env.REACT_APP_API_BEARER_TOKEN;
 
-  if (!auth_token) {
-    console.error("Missing REACT_APP_API_BEARER_TOKEN");
+    // Safety check
+    if (!auth_token) {
+      console.error("[Missing]: REACT_APP_API_BEARER_TOKEN");
+    }
+
+    config.headers = config.headers || {};
+
+    if (auth_token) {
+      config.headers.Authorization = `Bearer ${auth_token}`;
+    }
+
+    console.log("REQUEST DEBUG");
+    console.log("URL:", config.baseURL + config.url);
+    console.log("AUTH:", config.headers.Authorization);
+
+    return config;
+  },
+  (error) => {
+    console.error("Request setup error:", error);
+    return Promise.reject(error);
   }
-  
-  config.headers = config.headers || {};
-  config.headers.Authorization = `Bearer ${auth_token}`;
-  
-  console.log("REQUEST:");
-  console.log("URL:", config.baseURL + config.url);
-  console.log("AUTH:", config.headers?.Authorization);
-
-  return config;
-});
-
+);
 
 // Define error and response interfaces
 export interface ApiError {
