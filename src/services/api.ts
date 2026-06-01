@@ -29,7 +29,7 @@ apiClient.interceptors.request.use(
     }
 
     console.log("REQUEST DEBUG");
-    console.log("URL:", config.baseURL + config.url);
+    console.log("URL:", config.url);
     console.log("AUTH:", config.headers.Authorization);
 
     return config;
