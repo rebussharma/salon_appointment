@@ -9,7 +9,7 @@ const auth_token = process.env.REACT_APP_API_BEARER_TOKEN
 
 // Enhanced axios instance with defaults
 const apiClient = axios.create({
-  baseURL: process.env.REACT_APP_API_URL,
+  baseURL: API_BASE_URL,
   timeout: 10000
 });
 
