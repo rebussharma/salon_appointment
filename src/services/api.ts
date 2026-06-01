@@ -5,7 +5,6 @@ import { AppointmentData, ClientInfo, DateTimeDto, SubService } from '../utils/t
 // Base API configuration
 const API_BASE_URL = '/api'; // Cloudfare worker is deployed as proxy which takes care of rest URL
 const UPCOMING_APPT_URL = 'appointments/confirmed/upcoming/';
-const auth_token = process.env.REACT_APP_API_BEARER_TOKEN
 
 // Enhanced axios instance with defaults
 const apiClient = axios.create({
@@ -14,10 +13,18 @@ const apiClient = axios.create({
 });
 
 apiClient.interceptors.request.use((config) => {
-  const token = process.env.REACT_APP_API_BEARER_TOKEN;
+  const auth_token = process.env.REACT_APP_API_BEARER_TOKEN
 
+  if (!auth_token) {
+    console.error("Missing REACT_APP_API_BEARER_TOKEN");
+  }
+  
   config.headers = config.headers || {};
-  config.headers.Authorization = `Bearer ${token}`;
+  config.headers.Authorization = `Bearer ${auth_token}`;
+  
+  console.log("REQUEST:");
+  console.log("URL:", config.baseURL + config.url);
+  console.log("AUTH:", config.headers?.Authorization);
 
   return config;
 });
