@@ -9,12 +9,19 @@ const auth_token = process.env.REACT_APP_API_BEARER_TOKEN
 
 // Enhanced axios instance with defaults
 const apiClient = axios.create({
-  baseURL: API_BASE_URL,
-  headers: {
-    'Content-Type': 'application/json'
-  },
-  timeout: 10000, // 10 second timeout
+  baseURL: process.env.REACT_APP_API_URL,
+  timeout: 10000
 });
+
+apiClient.interceptors.request.use((config) => {
+  const token = process.env.REACT_APP_API_BEARER_TOKEN;
+
+  config.headers = config.headers || {};
+  config.headers.Authorization = `Bearer ${token}`;
+
+  return config;
+});
+
 
 // Define error and response interfaces
 export interface ApiError {
